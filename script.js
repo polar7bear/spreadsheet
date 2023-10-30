@@ -1,12 +1,11 @@
-const COLS = 10;
+const spreadSheetContainer = document.querySelector("#spreadsheet-container");
+const exportBtn = document.querySelector("#export-btn");
 const ROWS = 10;
-const spreadSheetContainer = document.querySelector('#spreadsheet-container');
+const COLS = 10;
 const spreadsheet = [];
-
-// const alphabet = [
-//     'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z'
-// ]
-
+const alphabets = [
+    "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z"
+]
 
 class Cell {
     constructor(isHeader, disabled, data, row, column, rowName, columnName, active = false) {
@@ -21,41 +20,57 @@ class Cell {
     }
 }
 
-initSpreadSheet();
+exportBtn.onclick = function (e) {
+    let csv = "";
+    for (let i = 0; i < spreadsheet.length; i++) {
+        if (i === 0) continue;
+        csv +=
+            spreadsheet[i]
+                .filter(item => !item.isHeader)
+                .map(item => item.data)
+                .join(',') + "\r\n";
+    }
 
-function initSpreadSheet() {
-    for(let i = 0; i < ROWS; i++) {
+    const csvObj = new Blob([csv]);
+    console.log('csvObj', csvObj);
+
+    const csvUrl = URL.createObjectURL(csvObj);
+    console.log('csvUrl', csvUrl);
+
+    const a = document.createElement("a");
+    a.href = csvUrl;
+    a.download = 'spreadsheet name.csv';
+    a.click();
+}
+
+initSpreadsheet();
+
+function initSpreadsheet() {
+    for (let i = 0; i < ROWS; i++) {
         let spreadsheetRow = [];
-        for(let j = 0; j < COLS; j++) {;
+        for (let j = 0; j < COLS; j++) {
             let cellData = '';
             let isHeader = false;
             let disabled = false;
 
-            if(j === 0) {
-                isHeader = true;
-                disabled = true;
+            if (j === 0) {
                 cellData = i;
-            }
-
-            let ascii = j + 65;
-            if(i === 0) {
-                cellData = String.fromCharCode(ascii-1);
                 isHeader = true;
                 disabled = true;
-                
-                //cellData = alphabet[j - 1];
             }
 
-            if(cellData === '@') {
-                cellData = '';
+            if (i === 0) {
+                cellData = alphabets[j - 1];
+                isHeader = true;
+                disabled = true;
             }
 
-            if(cellData <= 0) {
-                cellData = '';
+            if (!cellData) {
+                cellData = "";
             }
 
             const rowName = i;
-            const columnName = String.fromCharCode(ascii-1);
+            const columnName = alphabets[j - 1];
 
             const cell = new Cell(isHeader, disabled, cellData, i, j, rowName, columnName, false);
             spreadsheetRow.push(cell);
@@ -63,51 +78,64 @@ function initSpreadSheet() {
         spreadsheet.push(spreadsheetRow);
     }
     drawSheet();
-    console.log(spreadsheet);
 }
 
-function createCellElement(cell) {
+
+function createCellEl(cell) {
     const cellEl = document.createElement('input');
     cellEl.className = 'cell';
     cellEl.id = 'cell_' + cell.row + cell.column;
     cellEl.value = cell.data;
     cellEl.disabled = cell.disabled;
 
-    if(cell.isHeader) {
-        cellEl.classList.add('header');
+    if (cell.isHeader) {
+        cellEl.classList.add("header");
     }
 
     cellEl.onclick = () => handleCellClick(cell);
+    cellEl.onchange = (e) => handleOnChange(e.target.value, cell);
 
     return cellEl;
 }
 
+function handleOnChange(data, cell) {
+    cell.data = data;
+}
+
 function handleCellClick(cell) {
+    clearHeaderActiveStates();
     const columnHeader = spreadsheet[0][cell.column];
     const rowHeader = spreadsheet[cell.row][0];
     const columnHeaderEl = getElFromRowCol(columnHeader.row, columnHeader.column);
     const rowHeaderEl = getElFromRowCol(rowHeader.row, rowHeader.column);
-
+    
     columnHeaderEl.classList.add('active');
     rowHeaderEl.classList.add('active');
-    console.log('clicked cell', columnHeaderEl, rowHeaderEl);
+    
+    document.querySelector("#cell-status").innerHTML = cell.columnName + cell.rowName;
+}
+
+function clearHeaderActiveStates() {
+    const headers = document.querySelectorAll('.header');
+
+    headers.forEach((header) => {
+        header.classList.remove('active');
+    })
 }
 
 function getElFromRowCol(row, col) {
-    return document.querySelector('#cell_' + row + col);
+    return document.querySelector("#cell_" + row + col);
 }
 
 function drawSheet() {
-    for(let i = 0; i < spreadsheet.length; i++) {
-        const rowContainerEl = document.createElement('div');
-        rowContainerEl.className = 'cell-row';
+    for (let i = 0; i < spreadsheet.length; i++) {
+        const rowContainerEl = document.createElement("div");
+        rowContainerEl.className = "cell-row";
 
-        for(let j = 0; j < spreadsheet[i].length; j++) {
+        for (let j = 0; j < spreadsheet[i].length; j++) {
             const cell = spreadsheet[i][j];
-            rowContainerEl.append(createCellElement(cell));
+            rowContainerEl.append(createCellEl(cell));
         }
         spreadSheetContainer.append(rowContainerEl);
     }
 }
-
-
